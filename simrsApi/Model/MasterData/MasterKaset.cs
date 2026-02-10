@@ -5,13 +5,14 @@ namespace cpcApi.Model.MasterData
 {
     public class MasterKaset :BaseModel
     {
-        [Key]
-        [StringLength(50)]
-        public string IdKaset { get; set; } = Guid.NewGuid().ToString();
+        //[Key]
+        //[StringLength(50)]
+        //public string IdKaset { get; set; } = Guid.NewGuid().ToString();
 
         // kode kaset versi bank (opsional)
+        [Key]
         [StringLength(50)]
-        public string? KdKasetBank { get; set; }
+        public string? KdKaset { get; set; }
 
         // reference ke master bank (DB lain)
         [Required]

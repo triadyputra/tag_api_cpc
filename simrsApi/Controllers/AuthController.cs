@@ -104,7 +104,7 @@ namespace cpcApi.Controllers
 
                 var roles = await (
                                 from usr in _context.Users
-                                join userRole in _context.UserRoles on usr.Id equals userRole.UserId
+                                join userRole in _context.UserRoles.AsNoTracking() on usr.Id equals userRole.UserId
                                 join role in _context.Roles on userRole.RoleId equals role.Id
                                 where usr.UserName == user.UserName
                                 select role
@@ -301,7 +301,7 @@ namespace cpcApi.Controllers
             // Ambil roles beserta akses
             var roles = await (
                 from usr in _context.Users
-                join userRole in _context.UserRoles on usr.Id equals userRole.UserId
+                join userRole in _context.UserRoles.AsNoTracking() on usr.Id equals userRole.UserId
                 join role in _context.Roles on userRole.RoleId equals role.Id
                 where usr.UserName == username
                 select role
@@ -362,6 +362,37 @@ namespace cpcApi.Controllers
                 }))
             .ToList();
 
+            // =====================================================
+            // CONTROLLER YANG BOLEH MUNCUL DI MENU (HANYA "LIHAT")
+            // =====================================================
+            var allowedControllers = userAccessibleControllers
+                .Where(c => c.ActionViewModel.Any(a =>
+                    a.NamaAction.Equals("Lihat", StringComparison.OrdinalIgnoreCase)))
+                .Select(c => c.IdController)
+                .ToHashSet();
+
+            // =====================================================
+            // MAPPING MENU → CONTROLLER
+            // =====================================================
+            var menuControllerMap = new Dictionary<string, string>
+            {
+                ["/konfigurasi/akun"] = "Akun",
+                ["/konfigurasi/group"] = "Role",
+
+                ["/master-data/cabang"] = "MasterCabang",
+                ["/master-data/mesin-atm"] = "MasterMesin",
+                ["/master-data/kaset"] = "MasterKaset",
+                ["/master-data/bank"] = "MasterBank",
+                ["/master-data/merek-kaset"] = "MasterMerekKaset",
+
+                ["/logistik/register-seal"] = "RegisterSeal",
+
+                ["/cpc/order-pengisian-kaset"] = "OrderCpc",
+                ["/cpc/penerimaan-sisa-lokasi"] = "PengembalianKaset",
+                ["/cpc/form-cadangan"] = "OrderCpc",
+            };
+
+
             // Buat sendMenu ala front-end
             var sendMenu = new List<object>
             {
@@ -375,8 +406,6 @@ namespace cpcApi.Controllers
                     icon = "IconChartHistogram",
                     href = "/"
                 },
-
-
 
                 // ======================
                 // KONFIGURASI
@@ -439,7 +468,18 @@ namespace cpcApi.Controllers
                         },
                     }
                 },
-               
+
+                // ======================
+                // LOGISTIK
+                // ======================
+                new { navlabel = true, subheader = "Logistik" },
+                new {
+                    id = Guid.NewGuid(),
+                    title = "Register Nomor Seal",
+                    icon = "IconBarcode",
+                    href = "/logistik/register-seal"
+                },
+
                 // ======================
                 // CPC
                 // ======================
@@ -462,69 +502,129 @@ namespace cpcApi.Controllers
                     icon = "IconWashMachine",
                     href = "/cpc/form-cadangan"
                 },
-                //new {
-                //    id = Guid.NewGuid(),
-                //    title = "Form ATM Reflensment",
-                //    icon = "IconWashMachine",
-                //    href = "/cpc/form-atm-replenshment"
-                //},
 
                 new { navlabel = true, subheader = "Cash Vault" },
 
-                // ======================
-                // DATA PENDUKUNG (LEVEL 1 + CHILD)
-                // ======================
-                //new
-                //{
-                //    id = Guid.NewGuid(),
-                //    title = "Data Pendukung",
-                //    icon = "IconBoxMultiple",
-                //    href = "#", // parent only
-                //    children = new List<object>
-                //    {
-                //        new {
-                //            id = Guid.NewGuid(),
-                //            title = "Master Group Nakes",
-                //            icon = "IconPoint",
-                //            href = "/master-data/group-nakes"
-                //        }
-                //    }
-                //},
-
-                //new
-                //{
-                //    id = Guid.NewGuid(),
-                //    title = "Laboratorium",
-                //    icon = "IconFlaskFilled",
-                //    href = "#", // parent only
-                //    children = new List<object>
-                //    {
-                //        new {
-                //            id = Guid.NewGuid(),
-                //            title = "Master Kelompok Lab",
-                //            icon = "IconPoint",
-                //            href = "/master-data/kelompok-lab"
-                //        },
-                //        new {
-                //            id = Guid.NewGuid(),
-                //            title = "Master Pemeriksaan Lab",
-                //            icon = "IconPoint",
-                //            href = "/master-data/pemeriksaan-lab"
-                //        },
-                //        new {
-                //            id = Guid.NewGuid(),
-                //            title = "Master Panel Lab",
-                //            icon = "IconPoint",
-                //            href = "/master-data/panel-lab"
-                //        }
-                //    }
-                //},
 
                 
 
                 
             };
 
+            // =====================================================
+            // FILTER MENU BERDASARKAN HAK LIHAT
+            // =====================================================
+            List<object> FilterMenu(List<object> menus)
+            {
+                var result = new List<object>();
+                object? pendingNavLabel = null;
+
+                foreach (var item in menus)
+                {
+                    // =====================================
+                    // NAVLABEL → TAHAN DULU
+                    // =====================================
+                    if (item.GetType().GetProperty("navlabel") != null)
+                    {
+                        pendingNavLabel = item;
+                        continue;
+                    }
+
+                    var hrefProp = item.GetType().GetProperty("href");
+                    var childrenProp = item.GetType().GetProperty("children");
+
+                    var href = hrefProp?.GetValue(item)?.ToString();
+
+                    // =====================================
+                    // DASHBOARD (GLOBAL)
+                    // =====================================
+                    if (href == "/")
+                    {
+                        if (pendingNavLabel != null)
+                        {
+                            result.Add(pendingNavLabel);
+                            pendingNavLabel = null;
+                        }
+
+                        result.Add(item);
+                        continue;
+                    }
+
+                    // =====================================
+                    // MENU DENGAN CHILD (PARENT)
+                    // =====================================
+                    if (childrenProp != null)
+                    {
+                        var children = childrenProp.GetValue(item) as IEnumerable<object>;
+                        if (children == null) continue;
+
+                        var validChildren = new List<object>();
+
+                        foreach (var child in children)
+                        {
+                            var childHref = child.GetType()
+                                .GetProperty("href")
+                                ?.GetValue(child)
+                                ?.ToString();
+
+                            if (string.IsNullOrWhiteSpace(childHref) || childHref == "#")
+                                continue;
+
+                            if (!menuControllerMap.TryGetValue(childHref, out var controller))
+                                continue;
+
+                            if (!allowedControllers.Contains(controller))
+                                continue;
+
+                            // ✅ child valid
+                            validChildren.Add(child);
+                        }
+
+                        // ❌ TIDAK ADA CHILD VALID → SKIP PARENT
+                        if (!validChildren.Any())
+                            continue;
+
+                        // ✅ ADA CHILD VALID → TAMBAHKAN
+                        if (pendingNavLabel != null)
+                        {
+                            result.Add(pendingNavLabel);
+                            pendingNavLabel = null;
+                        }
+
+                        // rebuild parent dengan child hasil filter
+                        result.Add(new
+                        {
+                            id = item.GetType().GetProperty("id")?.GetValue(item),
+                            title = item.GetType().GetProperty("title")?.GetValue(item),
+                            icon = item.GetType().GetProperty("icon")?.GetValue(item),
+                            href = "#",
+                            children = validChildren
+                        });
+
+                        continue;
+                    }
+
+                    // =====================================
+                    // MENU BIASA
+                    // =====================================
+                    if (!string.IsNullOrEmpty(href) &&
+                        menuControllerMap.TryGetValue(href, out var ctrl) &&
+                        allowedControllers.Contains(ctrl))
+                    {
+                        if (pendingNavLabel != null)
+                        {
+                            result.Add(pendingNavLabel);
+                            pendingNavLabel = null;
+                        }
+
+                        result.Add(item);
+                    }
+                }
+
+                return result;
+            }
+
+            var filteredMenu = FilterMenu(sendMenu);
 
             return Ok(new
             {
@@ -540,7 +640,8 @@ namespace cpcApi.Controllers
                         role = userRoles.FirstOrDefault()
                     },
                     acces = sendRole,
-                    Menu = sendMenu
+                    Menu = filteredMenu,
+                    XMenu = sendMenu
                 }
             });
         }

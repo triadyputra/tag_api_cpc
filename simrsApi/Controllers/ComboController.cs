@@ -1,5 +1,7 @@
 ﻿using cpcApi.Data;
+using cpcApi.Filter;
 using cpcApi.Model;
+using cpcApi.Model.Cpc;
 using cpcApi.Model.DTO;
 using cpcApi.Model.DTO.Cpc.orderkaset;
 using cpcApi.Model.ENUM;
@@ -140,7 +142,7 @@ namespace cpcApi.Controllers
         public async Task<IActionResult> ComboKasetByCab(string kdcab, string bank)
         {
             var data = await _context.MasterKaset.Where(x=> x.KdCabang == kdcab && x.KdBank == bank).Where(x=> x.StatusFisik == "EMPTY").ToListAsync();
-            var Opt = data.Select(p => new { Id = p.IdKaset, Name = p.KdKasetBank });
+            var Opt = data.Select(p => new { Id = p.KdKaset, Name = p.KdKaset });
 
             return Ok(Opt);
         }
@@ -192,5 +194,55 @@ namespace cpcApi.Controllers
 
             return Ok(new { Data = data });
         }
+
+
+        #region Kaset
+        [HttpGet("ComboKasetReadyByCab")]
+        public async Task<IActionResult> ComboKasetReadyByCab(string kdBank, string kdCabang)
+        {
+            var data = await _context.ProsesKotakUangCpc
+                .Include(x => x.Set)
+                    .ThenInclude(s => s.Proses)
+                .Where(x =>
+                    x.Status == StatusKotakUangCpc.Ready &&
+                    x.Set.Proses.KodeBank == kdBank &&
+                    x.Set.Proses.KdCabang == kdCabang
+                )
+                .Select(x => new
+                {
+                    value = x.NomorKotakUang, // 🔥 PENTING: pakai ID kotak
+                    title = x.NomorKotakUang,
+                    NomorSeal = x.NomorSeal,
+                    Denom = x.JenisUang,
+                    Lembar = x.JumlahLembar
+                })
+                .ToListAsync();
+
+            return Ok(ApiResponse<object>.Success(data));
+        }
+
+        [HttpGet("CheckReadyByKode/{kodeKaset}")]
+        public async Task<IActionResult> CheckReady(string kodeKaset)
+        {
+            var kaset = await _context.ProsesKotakUangCpc
+                .Where(x =>
+                    x.NomorKotakUang == kodeKaset &&
+                    x.Status == StatusKotakUangCpc.Ready
+                )
+                .Select(x => new {
+                    x.NomorKotakUang,
+                    x.NomorSeal,
+                    x.JenisUang,
+                    x.JumlahLembar
+                })
+                .FirstOrDefaultAsync();
+
+            if (kaset == null)
+                return Ok(ApiResponse<object>.Error("Kaset tidak tersedia atau sudah dipakai", "500"));
+
+            return Ok(ApiResponse<object>.Success(kaset));
+        }
+
+        #endregion
     }
 }

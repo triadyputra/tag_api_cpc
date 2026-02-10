@@ -237,7 +237,7 @@ namespace cpcApi.Controllers.Cpc
                         .ToList();
 
                     var oldStocks = await _context.KasetStock
-                        .Where(x => oldKasetIds.Contains(x.IdKaset))
+                        .Where(x => oldKasetIds.Contains(x.KdKaset))
                         .ToListAsync();
 
                     foreach (var ks in oldStocks)
@@ -261,7 +261,7 @@ namespace cpcApi.Controllers.Cpc
                     .ToList();
 
                 var kasetStocks = await _context.KasetStock
-                    .Where(x => kasetIds.Contains(x.IdKaset))
+                    .Where(x => kasetIds.Contains(x.KdKaset))
                     .ToListAsync();
 
                 if (kasetStocks.Count != kasetIds.Count)
@@ -271,7 +271,7 @@ namespace cpcApi.Controllers.Cpc
                     .FirstOrDefault(x => x.Status != "ON_TRIP" && x.Status != "INSTALLED");
 
                 if (invalid != null)
-                    return Conflict($"Kaset {invalid.IdKaset} tidak dalam status ON_TRIP.");
+                    return Conflict($"Kaset {invalid.KdKaset} tidak dalam status ON_TRIP.");
 
                 foreach (var ks in kasetStocks)
                 {

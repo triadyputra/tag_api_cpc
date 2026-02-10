@@ -45,7 +45,7 @@ namespace cpcApi.Filter
 
             var roles = await (
                 from user in _dbContext.Users
-                join userRole in _dbContext.UserRoles on user.Id equals userRole.UserId
+                join userRole in _dbContext.UserRoles.AsNoTracking() on user.Id equals userRole.UserId
                 join role in _dbContext.Roles on userRole.RoleId equals role.Id
                 where user.UserName == username
                 select role

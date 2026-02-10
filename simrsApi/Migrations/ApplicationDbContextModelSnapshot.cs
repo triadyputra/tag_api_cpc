@@ -424,7 +424,7 @@ namespace cpcApi.Migrations
                     b.Property<int>("Kaset")
                         .HasColumnType("int");
 
-                    b.Property<string>("KasetStockIdKaset")
+                    b.Property<string>("KasetStockKdKaset")
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("KodeKaset")
@@ -446,7 +446,7 @@ namespace cpcApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("KasetStockIdKaset");
+                    b.HasIndex("KasetStockKdKaset");
 
                     b.HasIndex("PengembalianId");
 
@@ -459,9 +459,12 @@ namespace cpcApi.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("JenisUang")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("JenisUang")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("int");
 
                     b.Property<int?>("JumlahLembar")
                         .HasColumnType("int");
@@ -476,6 +479,12 @@ namespace cpcApi.Migrations
 
                     b.Property<Guid>("ProsesSetPersiapanUangCpcId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("UrutanKolom")
                         .HasColumnType("int");
@@ -580,6 +589,32 @@ namespace cpcApi.Migrations
                     b.ToTable("ProsesSetPersiapanUangCpc", (string)null);
                 });
 
+            modelBuilder.Entity("cpcApi.Model.Logistik.RegisterSeal", b =>
+                {
+                    b.Property<string>("NomorSeal")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ReservedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("NomorSeal");
+
+                    b.ToTable("RegisterSeal");
+                });
+
             modelBuilder.Entity("cpcApi.Model.MasterData.KasetMovement", b =>
                 {
                     b.Property<long>("IdMovement")
@@ -597,7 +632,7 @@ namespace cpcApi.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("IdKaset")
+                    b.Property<string>("KdKaset")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -636,7 +671,7 @@ namespace cpcApi.Migrations
                     b.HasIndex("Wsid")
                         .HasDatabaseName("IX_KASET_MOVEMENT_WSID");
 
-                    b.HasIndex("IdKaset", "created")
+                    b.HasIndex("KdKaset", "created")
                         .HasDatabaseName("IX_KASET_MOVEMENT_KASET_DATE");
 
                     b.ToTable("KasetMovement");
@@ -644,7 +679,7 @@ namespace cpcApi.Migrations
 
             modelBuilder.Entity("cpcApi.Model.MasterData.KasetStock", b =>
                 {
-                    b.Property<string>("IdKaset")
+                    b.Property<string>("KdKaset")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -657,6 +692,9 @@ namespace cpcApi.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("ReservedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -665,7 +703,7 @@ namespace cpcApi.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("IdKaset");
+                    b.HasKey("KdKaset");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("IX_KASET_STOCK_STATUS");
@@ -681,7 +719,7 @@ namespace cpcApi.Migrations
 
             modelBuilder.Entity("cpcApi.Model.MasterData.MasterKaset", b =>
                 {
-                    b.Property<string>("IdKaset")
+                    b.Property<string>("KdKaset")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -699,10 +737,6 @@ namespace cpcApi.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("KdKasetBank")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("KdMerek")
                         .IsRequired()
@@ -742,10 +776,14 @@ namespace cpcApi.Migrations
                     b.Property<DateTime?>("updatedat")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("IdKaset");
+                    b.HasKey("KdKaset");
 
                     b.HasIndex("KdBank")
                         .HasDatabaseName("IX_MST_KASET_KDBANK");
+
+                    b.HasIndex("KdKaset")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_MST_KASET_KDKASET");
 
                     b.HasIndex("KdMerek")
                         .HasDatabaseName("IX_MST_KASET_KDMEREK");
@@ -910,7 +948,7 @@ namespace cpcApi.Migrations
                 {
                     b.HasOne("cpcApi.Model.MasterData.KasetStock", "KasetStock")
                         .WithMany()
-                        .HasForeignKey("KasetStockIdKaset");
+                        .HasForeignKey("KasetStockKdKaset");
 
                     b.HasOne("cpcApi.Model.Cpc.PengembalianKaset", "Pengembalian")
                         .WithMany("Details")
@@ -949,7 +987,7 @@ namespace cpcApi.Migrations
                 {
                     b.HasOne("cpcApi.Model.MasterData.MasterKaset", "Kaset")
                         .WithMany("Movements")
-                        .HasForeignKey("IdKaset")
+                        .HasForeignKey("KdKaset")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -960,7 +998,7 @@ namespace cpcApi.Migrations
                 {
                     b.HasOne("cpcApi.Model.MasterData.MasterKaset", "Kaset")
                         .WithOne("Stock")
-                        .HasForeignKey("cpcApi.Model.MasterData.KasetStock", "IdKaset")
+                        .HasForeignKey("cpcApi.Model.MasterData.KasetStock", "KdKaset")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

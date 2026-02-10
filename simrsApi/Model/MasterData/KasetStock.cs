@@ -7,12 +7,15 @@ namespace cpcApi.Model.MasterData
     {
         [Key]
         [StringLength(50)]
-        public string IdKaset { get; set; } = default!;
+        public string KdKaset { get; set; } = default!;
 
-        // EMPTY / LOADED / ON_TRIP / INSTALLED / DAMAGED
+        // EMPTY / LOADED / ON_TRIP / INSTALLED / DAMAGED / RESERVED
         [Required]
         [StringLength(20)]
         public string Status { get; set; } = default!;
+
+        // 🔥 PENTING
+        public string? ReservedBy { get; set; } // DraftId / OrderId / WOId
 
         // VAULT / WO / ATM / REPAIR
         [Required]

@@ -2,7 +2,7 @@
 {
     public class ViewMasterKasetDto
     {
-        public string IdKaset { get; set; } = default!;
+        public string KdKaset { get; set; } = default!;
         public string NoSerial { get; set; } = default!;
 
         public string KdBank { get; set; } = default!;

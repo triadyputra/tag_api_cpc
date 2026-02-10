@@ -28,9 +28,15 @@ namespace cpcApi.Model
                     NamaMenu = "Master Data",
                 },
 
-                 new MenuViewModel{
+                new MenuViewModel{
+                    IdMenu = "Logistik",
+                    NoUrut = 4,
+                    NamaMenu = "Logistik",
+                },
+
+                new MenuViewModel{
                     IdMenu = "CPC",
-                    NoUrut = 3,
+                    NoUrut = 5,
                     NamaMenu = "Cash Processing Center",
                 },
             };
@@ -96,6 +102,16 @@ namespace cpcApi.Model
                 },
                 #endregion
           
+                #region Logistik
+                new ControllerViewModel{
+                    IdController = "RegisterSeal",
+                    NoUrut = 1,
+                    Controller = "Register Seal",
+                    IdMenu = "Logistik",
+                },
+                #endregion
+          
+
                 #region cpc
                 new ControllerViewModel{
                     IdController = "OrderCpc",
@@ -271,6 +287,18 @@ namespace cpcApi.Model
                     NamaAction = "Hapus",
                     IdController = "MasterKaset",
                 },
+                new ActionViewModel{
+                    IdAction = "DownloadTemplate",
+                    NoUrut = 5,
+                    NamaAction = "Download Templete",
+                    IdController = "MasterKaset",
+                },
+                new ActionViewModel{
+                    IdAction = "UploadKaset",
+                    NoUrut = 6,
+                    NamaAction = "Upload Data",
+                    IdController = "MasterKaset",
+                },
 
                  /* Master Bank */
                 new ActionViewModel{
@@ -324,6 +352,29 @@ namespace cpcApi.Model
                     IdController = "MasterMerekKaset",
                 },
                 #endregion
+
+                #region Logistik
+                /* Register Seal */
+                new ActionViewModel{
+                    IdAction = "GetListRegisterSeal",
+                    NoUrut = 1,
+                    NamaAction = "Lihat",
+                    IdController = "RegisterSeal",
+                },
+                new ActionViewModel{
+                    IdAction = "PostRegisterSeal",
+                    NoUrut = 2,
+                    NamaAction = "Tambah",
+                    IdController = "RegisterSeal",
+                },
+                new ActionViewModel{
+                    IdAction = "PutRegisterSeal",
+                    NoUrut = 3,
+                    NamaAction = "Edit",
+                    IdController = "RegisterSeal",
+                },
+                #endregion
+
 
                 #region cpc
                 /* Order Pengisian kaset */

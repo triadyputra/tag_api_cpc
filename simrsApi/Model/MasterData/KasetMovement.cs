@@ -9,7 +9,7 @@ namespace cpcApi.Model.MasterData
 
         [Required]
         [StringLength(50)]
-        public string IdKaset { get; set; } = default!;
+        public string KdKaset { get; set; } = default!;
 
         // LOAD / DISPATCH / INSTALL / RETURN / REPAIR
         [Required]

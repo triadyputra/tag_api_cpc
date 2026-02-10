@@ -17,7 +17,16 @@
     <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Update="Report\CpcAtmReport.cs">
+      <SubType>XtraReport</SubType>
+    </Compile>
+    <Compile Update="Report\RepBarcodeKaset.cs">
+      <SubType>XtraReport</SubType>
+    </Compile>
     <Compile Update="Report\RepOrderPengisianAtm.cs">
+      <SubType>XtraReport</SubType>
+    </Compile>
+    <Compile Update="Report\RepProsesCpc.cs">
       <SubType>XtraReport</SubType>
     </Compile>
   </ItemGroup>

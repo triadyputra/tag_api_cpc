@@ -1,5 +1,6 @@
 ﻿using cpcApi.Model;
 using cpcApi.Model.Cpc;
+using cpcApi.Model.Logistik;
 using cpcApi.Model.MasterData;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -39,6 +40,9 @@ namespace cpcApi.Data
         public DbSet<ProsesSetPersiapanUangCpc> ProsesSetPersiapanUangCpc { get; set; }
         public DbSet<ProsesKotakUangCpc> ProsesKotakUangCpc { get; set; }
 
+        /* Logistik */
+        public DbSet<RegisterSeal> RegisterSeal { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -49,9 +53,13 @@ namespace cpcApi.Data
                 /* ================= INDEX ================= */
 
                 // ===== UNIQUE =====
-                entity.HasIndex(e => e.NoSerial)
+                entity.HasIndex(e => e.KdKaset)
                     .IsUnique()
-                    .HasDatabaseName("UQ_MST_KASET_NOSERIAL");
+                    .HasDatabaseName("UQ_MST_KASET_KDKASET");
+
+                entity.HasIndex(e => e.NoSerial)
+                     .IsUnique()
+                     .HasDatabaseName("UQ_MST_KASET_NOSERIAL");
 
                 // ===== SEARCH & LIST =====
                 entity.HasIndex(e => e.KdBank)
@@ -74,7 +82,7 @@ namespace cpcApi.Data
 
                 entity.HasOne(e => e.Kaset)
                     .WithOne(e => e.Stock)
-                    .HasForeignKey<KasetStock>(e => e.IdKaset)
+                    .HasForeignKey<KasetStock>(e => e.KdKaset)
                     .OnDelete(DeleteBehavior.Cascade);
                 // ✅ BOLEH CASCADE
 
@@ -99,14 +107,14 @@ namespace cpcApi.Data
 
                 entity.HasOne(e => e.Kaset)
                     .WithMany(e => e.Movements)
-                    .HasForeignKey(e => e.IdKaset)
+                    .HasForeignKey(e => e.KdKaset)
                     .OnDelete(DeleteBehavior.Restrict);
                 // ❌ TIDAK BOLEH CASCADE (audit wajib aman)
 
                 /* ================= INDEX ================= */
 
                 // Audit histori per kaset
-                entity.HasIndex(e => new { e.IdKaset, e.created })
+                entity.HasIndex(e => new { e.KdKaset, e.created })
                     .HasDatabaseName("IX_KASET_MOVEMENT_KASET_DATE");
 
                 // Audit per Work Order
@@ -157,7 +165,7 @@ namespace cpcApi.Data
                 entity.HasOne(d => d.KasetStock)
                       .WithMany(k => k.OrderDetails)
                       .HasForeignKey(d => d.KodeKaset)
-                      .HasPrincipalKey(k => k.IdKaset);
+                      .HasPrincipalKey(k => k.KdKaset);
             });
 
 

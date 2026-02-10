@@ -129,5 +129,57 @@ namespace cpcApi.Helper
         }
 
 
+
+
+        public static async Task<string> GenerateKdKasetBankAsync(
+        ApplicationDbContext context,
+        string kdBank)
+        {
+            // ambil kode terakhir berdasarkan bank
+            var lastCode = await context.MasterKaset
+                .Where(x => x.KdBank == kdBank && x.KdKaset != null)
+                .OrderByDescending(x => x.KdKaset)
+                .Select(x => x.KdKaset)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+
+            if (!string.IsNullOrEmpty(lastCode))
+            {
+                // contoh lastCode: BCA-000012
+                var parts = lastCode.Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[1], out int lastNumber))
+                {
+                    nextNumber = lastNumber + 1;
+                }
+            }
+
+            return $"{kdBank}-{nextNumber:D6}";
+        }
+
+        public static async Task<List<string>> GenerateBulkKdKasetBankAsync(
+        ApplicationDbContext context,
+        string kdBank,
+        int count)
+        {
+            var lastCode = await context.MasterKaset
+                .Where(x => x.KdBank == kdBank && x.KdKaset != null)
+                .OrderByDescending(x => x.KdKaset)
+                .Select(x => x.KdKaset)
+                .FirstOrDefaultAsync();
+
+            int start = 1;
+
+            if (!string.IsNullOrEmpty(lastCode))
+            {
+                var parts = lastCode.Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[1], out int last))
+                    start = last + 1;
+            }
+
+            return Enumerable.Range(start, count)
+                .Select(i => $"{kdBank}-{i:D6}")
+                .ToList();
+        }
     }
 }

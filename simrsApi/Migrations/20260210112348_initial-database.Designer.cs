@@ -12,8 +12,8 @@ using cpcApi.Data;
 namespace cpcApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260126050354_fix_decimal_precision_order_kaset")]
-    partial class fix_decimal_precision_order_kaset
+    [Migration("20260210112348_initial-database")]
+    partial class initialdatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -281,6 +281,9 @@ namespace cpcApi.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTime>("TanggalOrder")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("created")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -340,6 +343,281 @@ namespace cpcApi.Migrations
                     b.ToTable("OrderPengisianKasetDetail");
                 });
 
+            modelBuilder.Entity("cpcApi.Model.Cpc.PengembalianKaset", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Catatan")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DiterimaOleh")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Jumlah")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("KDBANK")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("KDCABANG")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Lokasi")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("MerekMesin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("NomorMesin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("OrderPengisianId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("TanggalTerima")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("created")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("createdat")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("updated")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("updatedat")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PengembalianKaset");
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.PengembalianKasetDetail", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("Denom")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Kaset")
+                        .HasColumnType("int");
+
+                    b.Property<string>("KasetStockKdKaset")
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("KodeKaset")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Lembar")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NoSeal")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PengembalianId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KasetStockKdKaset");
+
+                    b.HasIndex("PengembalianId");
+
+                    b.ToTable("PengembalianKasetDetail");
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.ProsesKotakUangCpc", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("JenisUang")
+                        .HasMaxLength(20)
+                        .HasColumnType("int");
+
+                    b.Property<int?>("JumlahLembar")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NomorKotakUang")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("NomorSeal")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("ProsesSetPersiapanUangCpcId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UrutanKolom")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProsesSetPersiapanUangCpcId", "UrutanKolom")
+                        .IsUnique()
+                        .HasDatabaseName("UX_KOTAK_CPC_SET_URUTAN");
+
+                    b.ToTable("ProsesKotakUangCpc", (string)null);
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.ProsesPersiapanUangCpc", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("JabatanPetugas")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<TimeOnly>("JamMulai")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly>("JamSelesai")
+                        .HasColumnType("time");
+
+                    b.Property<int>("JenisProses")
+                        .HasColumnType("int");
+
+                    b.Property<string>("KdCabang")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("KodeBank")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Meja")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("NamaPetugas")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NomorDvr")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PathTtdPetugas")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("TanggalDibuat")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TanggalFinal")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly>("TanggalProses")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_PROSES_CPC_STATUS");
+
+                    b.HasIndex("KodeBank", "TanggalProses")
+                        .HasDatabaseName("IX_PROSES_CPC_BANK_TANGGAL");
+
+                    b.ToTable("ProsesPersiapanUangCpc", (string)null);
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.ProsesSetPersiapanUangCpc", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProsesPersiapanUangCpcId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SetKe")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProsesPersiapanUangCpcId", "SetKe")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SET_CPC_PROSES_SETKE");
+
+                    b.ToTable("ProsesSetPersiapanUangCpc", (string)null);
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Logistik.RegisterSeal", b =>
+                {
+                    b.Property<string>("NomorSeal")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ReservedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("NomorSeal");
+
+                    b.ToTable("RegisterSeal");
+                });
+
             modelBuilder.Entity("cpcApi.Model.MasterData.KasetMovement", b =>
                 {
                     b.Property<long>("IdMovement")
@@ -357,7 +635,7 @@ namespace cpcApi.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("IdKaset")
+                    b.Property<string>("KdKaset")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -396,7 +674,7 @@ namespace cpcApi.Migrations
                     b.HasIndex("Wsid")
                         .HasDatabaseName("IX_KASET_MOVEMENT_WSID");
 
-                    b.HasIndex("IdKaset", "created")
+                    b.HasIndex("KdKaset", "created")
                         .HasDatabaseName("IX_KASET_MOVEMENT_KASET_DATE");
 
                     b.ToTable("KasetMovement");
@@ -404,7 +682,7 @@ namespace cpcApi.Migrations
 
             modelBuilder.Entity("cpcApi.Model.MasterData.KasetStock", b =>
                 {
-                    b.Property<string>("IdKaset")
+                    b.Property<string>("KdKaset")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -417,6 +695,9 @@ namespace cpcApi.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("ReservedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -425,7 +706,7 @@ namespace cpcApi.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("IdKaset");
+                    b.HasKey("KdKaset");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("IX_KASET_STOCK_STATUS");
@@ -441,7 +722,7 @@ namespace cpcApi.Migrations
 
             modelBuilder.Entity("cpcApi.Model.MasterData.MasterKaset", b =>
                 {
-                    b.Property<string>("IdKaset")
+                    b.Property<string>("KdKaset")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -459,10 +740,6 @@ namespace cpcApi.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("KdKasetBank")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("KdMerek")
                         .IsRequired()
@@ -502,10 +779,14 @@ namespace cpcApi.Migrations
                     b.Property<DateTime?>("updatedat")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("IdKaset");
+                    b.HasKey("KdKaset");
 
                     b.HasIndex("KdBank")
                         .HasDatabaseName("IX_MST_KASET_KDBANK");
+
+                    b.HasIndex("KdKaset")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_MST_KASET_KDKASET");
 
                     b.HasIndex("KdMerek")
                         .HasDatabaseName("IX_MST_KASET_KDMEREK");
@@ -666,11 +947,50 @@ namespace cpcApi.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("cpcApi.Model.Cpc.PengembalianKasetDetail", b =>
+                {
+                    b.HasOne("cpcApi.Model.MasterData.KasetStock", "KasetStock")
+                        .WithMany()
+                        .HasForeignKey("KasetStockKdKaset");
+
+                    b.HasOne("cpcApi.Model.Cpc.PengembalianKaset", "Pengembalian")
+                        .WithMany("Details")
+                        .HasForeignKey("PengembalianId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("KasetStock");
+
+                    b.Navigation("Pengembalian");
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.ProsesKotakUangCpc", b =>
+                {
+                    b.HasOne("cpcApi.Model.Cpc.ProsesSetPersiapanUangCpc", "Set")
+                        .WithMany("DaftarKotakUang")
+                        .HasForeignKey("ProsesSetPersiapanUangCpcId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Set");
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.ProsesSetPersiapanUangCpc", b =>
+                {
+                    b.HasOne("cpcApi.Model.Cpc.ProsesPersiapanUangCpc", "Proses")
+                        .WithMany("DaftarSet")
+                        .HasForeignKey("ProsesPersiapanUangCpcId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Proses");
+                });
+
             modelBuilder.Entity("cpcApi.Model.MasterData.KasetMovement", b =>
                 {
                     b.HasOne("cpcApi.Model.MasterData.MasterKaset", "Kaset")
                         .WithMany("Movements")
-                        .HasForeignKey("IdKaset")
+                        .HasForeignKey("KdKaset")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -681,7 +1001,7 @@ namespace cpcApi.Migrations
                 {
                     b.HasOne("cpcApi.Model.MasterData.MasterKaset", "Kaset")
                         .WithOne("Stock")
-                        .HasForeignKey("cpcApi.Model.MasterData.KasetStock", "IdKaset")
+                        .HasForeignKey("cpcApi.Model.MasterData.KasetStock", "KdKaset")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -702,6 +1022,21 @@ namespace cpcApi.Migrations
             modelBuilder.Entity("cpcApi.Model.Cpc.OrderPengisianKaset", b =>
                 {
                     b.Navigation("Details");
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.PengembalianKaset", b =>
+                {
+                    b.Navigation("Details");
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.ProsesPersiapanUangCpc", b =>
+                {
+                    b.Navigation("DaftarSet");
+                });
+
+            modelBuilder.Entity("cpcApi.Model.Cpc.ProsesSetPersiapanUangCpc", b =>
+                {
+                    b.Navigation("DaftarKotakUang");
                 });
 
             modelBuilder.Entity("cpcApi.Model.MasterData.KasetStock", b =>

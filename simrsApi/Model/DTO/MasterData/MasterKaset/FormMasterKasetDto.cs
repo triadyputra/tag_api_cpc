@@ -2,9 +2,9 @@
 {
     public class FormMasterKasetDto
     {
-        public string? IdKaset { get; set; }
+        //public string? IdKaset { get; set; }
 
-        public string? KdKasetBank { get; set; }
+        public string? KdKaset { get; set; }
 
         public string KdBank { get; set; } = default!;
         public string? NmBank { get; set; } = default!;

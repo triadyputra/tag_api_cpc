@@ -6,6 +6,7 @@ using cpcApi.Services;
 using cpcApi.Services.Bank;
 using cpcApi.Services.Cabang;
 using cpcApi.Services.Combo;
+using cpcApi.Services.Cpc;
 using cpcApi.Services.Mesin;
 using cpcApi.Services.Order;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -23,8 +24,23 @@ var builder = WebApplication.CreateBuilder(args);
 //var cs = builder.Configuration.GetConnectionString("MonitoringConnection");
 //Console.WriteLine(cs);
 
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//    options.UseSqlServer("name=DefaultConnection"));
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer("name=DefaultConnection"));
+{
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null
+            );
+        }
+    );
+});
 
 // For Identity
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(p =>
@@ -133,6 +149,8 @@ builder.Services.AddScoped<IRepoCombo, RepoCombo>();
 builder.Services.AddScoped<IRepoBank, RepoBank>();
 
 builder.Services.AddScoped<IRepoOrder, RepoOrder>();
+
+builder.Services.AddScoped<CpcReportService>();
 
 
 var app = builder.Build();
