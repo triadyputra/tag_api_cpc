@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using cpcApi.Data;
 
@@ -11,9 +12,11 @@ using cpcApi.Data;
 namespace cpcApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260211122802_create_table_stock")]
+    partial class create_table_stock
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -282,13 +285,14 @@ namespace cpcApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("KdCabang", "Nominal")
-                        .IsUnique()
-                        .HasDatabaseName("UX_MUTASIVAULT_SALDOAWAL")
-                        .HasFilter("[TipeMutasi] = 'SALDO_AWAL'");
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_MUTASIVAULT_CREATED");
 
-                    b.HasIndex("KdCabang", "Nominal", "CreatedAt")
-                        .HasDatabaseName("IX_MUTASIVAULT_HISTORY");
+                    b.HasIndex("KdCabang")
+                        .HasDatabaseName("IX_MUTASIVAULT_CABANG");
+
+                    b.HasIndex("KdCabang", "CreatedAt")
+                        .HasDatabaseName("IX_MUTASIVAULT_CABANG_CREATED");
 
                     b.ToTable("MutasiVault", (string)null);
                 });
@@ -654,12 +658,6 @@ namespace cpcApi.Migrations
 
                     b.Property<int>("Nominal")
                         .HasColumnType("int");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.Property<long>("SaldoLembar")
                         .HasColumnType("bigint");

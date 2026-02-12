@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using cpcApi.Data;
 
@@ -11,9 +12,11 @@ using cpcApi.Data;
 namespace cpcApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260211095054_add_Table_denom")]
+    partial class add_Table_denom
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -244,53 +247,6 @@ namespace cpcApi.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
-                });
-
-            modelBuilder.Entity("cpcApi.Model.Cpc.MutasiVault", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("KdCabang")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int>("Nominal")
-                        .HasColumnType("int");
-
-                    b.Property<long>("QtyLembar")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ReferenceNo")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<long>("SaldoSetelah")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("TipeMutasi")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("KdCabang", "Nominal")
-                        .IsUnique()
-                        .HasDatabaseName("UX_MUTASIVAULT_SALDOAWAL")
-                        .HasFilter("[TipeMutasi] = 'SALDO_AWAL'");
-
-                    b.HasIndex("KdCabang", "Nominal", "CreatedAt")
-                        .HasDatabaseName("IX_MUTASIVAULT_HISTORY");
-
-                    b.ToTable("MutasiVault", (string)null);
                 });
 
             modelBuilder.Entity("cpcApi.Model.Cpc.OrderPengisianKaset", b =>
@@ -637,46 +593,6 @@ namespace cpcApi.Migrations
                         .HasDatabaseName("UX_SET_CPC_PROSES_SETKE");
 
                     b.ToTable("ProsesSetPersiapanUangCpc", (string)null);
-                });
-
-            modelBuilder.Entity("cpcApi.Model.Cpc.StokVaultCabang", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("KdCabang")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int>("Nominal")
-                        .HasColumnType("int");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<long>("SaldoLembar")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("KdCabang")
-                        .HasDatabaseName("IX_STOKVAULT_CABANG");
-
-                    b.HasIndex("KdCabang", "Nominal")
-                        .IsUnique()
-                        .HasDatabaseName("UX_STOKVAULT_CABANG_NOMINAL");
-
-                    b.ToTable("StokVaultCabang", (string)null);
                 });
 
             modelBuilder.Entity("cpcApi.Model.Konfigurasi.AuditLogin", b =>

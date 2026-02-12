@@ -11,5 +11,6 @@ namespace cpcApi.Model
         public string? Photo { set; get; }
         public bool Active { get; set; }
         public string? Cabang { set; get; }
+        public int SessionVersion { get; set; } = 0;
     }
 }

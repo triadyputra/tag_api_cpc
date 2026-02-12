@@ -121,7 +121,6 @@ namespace cpcApi.Controllers.Cpc
 
         [ApiKeyAuthorize]
         [HttpPost]
-        [HttpPost]
         public async Task<ActionResult<ApiResponse<object>>> PostOrderCpc(
             [FromBody] OrderPengisianKasetRequest payload
         )
@@ -210,6 +209,19 @@ namespace cpcApi.Controllers.Cpc
                             ks.LocationType = null;
                             ks.LocationId = null;
                             ks.UpdatedAt = timeNow;
+
+                            // 🔥 INSERT MOVEMENT
+                            _context.KasetMovement.Add(new KasetMovement
+                            {
+                                KdKaset = ks.KdKaset,
+                                Action = "RETURN",
+                                FromLocation = "WO",
+                                ToLocation = "VAULT",
+                                NoWO = order!.Id,
+                                Wsid = payload.NomorMesin,
+                                created = username,
+                                createdat = timeNow
+                            });
                         }
 
                         var oldKotak = await _context.ProsesKotakUangCpc
@@ -251,10 +263,25 @@ namespace cpcApi.Controllers.Cpc
 
                         foreach (var ks in newStocks)
                         {
+                            var fromLocation = ks.LocationType ?? "VAULT";
+
                             ks.Status = "ON_TRIP";
                             ks.LocationType = "WO";
                             ks.LocationId = order!.Id;
                             ks.UpdatedAt = timeNow;
+
+                            // 🔥 INSERT MOVEMENT
+                            _context.KasetMovement.Add(new KasetMovement
+                            {
+                                KdKaset = ks.KdKaset,
+                                Action = "DISPATCH",
+                                FromLocation = fromLocation,
+                                ToLocation = "WO",
+                                NoWO = order.Id,
+                                Wsid = payload.NomorMesin,
+                                created = username,
+                                createdat = timeNow
+                            });
                         }
 
                         var newKotak = await _context.ProsesKotakUangCpc
@@ -303,6 +330,8 @@ namespace cpcApi.Controllers.Cpc
                             Denom = d.Denom,
                             Lembar = d.Lembar
                         });
+
+                        
                     }
 
                     // ===============================
@@ -337,6 +366,28 @@ namespace cpcApi.Controllers.Cpc
             });
         }
 
+        private void AddKasetMovement(
+        string kdKaset,
+        string action,
+        string? from,
+        string? to,
+        string noWo,
+        string? wsid,
+        string username,
+        DateTime timeNow)
+        {
+            _context.KasetMovement.Add(new KasetMovement
+            {
+                KdKaset = kdKaset,
+                Action = action,
+                FromLocation = from,
+                ToLocation = to,
+                NoWO = noWo,
+                Wsid = wsid,
+                created = username,
+                createdat = timeNow
+            });
+        }
         //public async Task<ActionResult<ApiResponse<object>>> PostOrderCpc(
         //    [FromBody] OrderPengisianKasetRequest payload
         //)

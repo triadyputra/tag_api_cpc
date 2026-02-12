@@ -7,6 +7,7 @@ using cpcApi.Services.Bank;
 using cpcApi.Services.Cabang;
 using cpcApi.Services.Combo;
 using cpcApi.Services.Cpc;
+using cpcApi.Services.Cpc.Vault;
 using cpcApi.Services.Mesin;
 using cpcApi.Services.Order;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -109,11 +110,15 @@ builder.Services.AddSwaggerGen(opt =>
     });
 });
 
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>();
+
 // Add CORS service with policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontendOn8085", policy =>
-        policy.WithOrigins("https://localhost:3000", "http://localhost:3000", "http://157.66.34.74", "http://157.66.34.74:82")
+        policy.WithOrigins(allowedOrigins ?? Array.Empty<string>())
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials()); // jika pakai cookie/auth
@@ -150,6 +155,8 @@ builder.Services.AddScoped<IRepoBank, RepoBank>();
 
 builder.Services.AddScoped<IRepoOrder, RepoOrder>();
 
+builder.Services.AddScoped<IVaultService, VaultService>();
+
 builder.Services.AddScoped<CpcReportService>();
 
 
@@ -174,13 +181,20 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseRouting();
+
 app.UseCors("AllowFrontendOn8085");
 
 //app.UseHttpsRedirection();
 
-//app.UseMiddleware<HeaderValidationMiddleware>();
+
+app.UseAuthentication();
+
+app.UseMiddleware<SessionValidationMiddleware>();
 
 app.UseAuthorization();
+
+//app.UseMiddleware<HeaderValidationMiddleware>();
 
 // Enable static files
 app.UseStaticFiles(); // default: wwwroot

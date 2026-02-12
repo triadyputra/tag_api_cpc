@@ -67,6 +67,12 @@ namespace cpcApi.Model
                     Controller = "Akun",
                     IdMenu = "Konfigurasi",
                 },
+                new ControllerViewModel{
+                    IdController = "AuditLogin",
+                    NoUrut = 2,
+                    Controller = "User Login",
+                    IdMenu = "Konfigurasi",
+                },
                 #endregion
 
                 #region master-data
@@ -100,6 +106,12 @@ namespace cpcApi.Model
                     Controller = "Master Merk Kaset",
                     IdMenu = "MasterData",
                 },
+                new ControllerViewModel{
+                    IdController = "MasterDenom",
+                    NoUrut = 6,
+                    Controller = "Master Denom",
+                    IdMenu = "MasterData",
+                },
                 #endregion
           
                 #region Logistik
@@ -111,7 +123,6 @@ namespace cpcApi.Model
                 },
                 #endregion
           
-
                 #region cpc
                 new ControllerViewModel{
                     IdController = "OrderCpc",
@@ -129,6 +140,19 @@ namespace cpcApi.Model
                     IdController = "ProsesPersiapanUang",
                     NoUrut = 1,
                     Controller = "Proses Persiapan Uang",
+                    IdMenu = "CPC",
+                },
+                new ControllerViewModel{
+                    IdController = "TrackingKaset",
+                    NoUrut = 1,
+                    Controller = "Tracking Kaset",
+                    IdMenu = "CPC",
+                },
+                // Vault
+                new ControllerViewModel{
+                    IdController = "StokVault",
+                    NoUrut = 1,
+                    Controller = "Stok Vault",
                     IdMenu = "CPC",
                 },
                 #endregion
@@ -204,6 +228,14 @@ namespace cpcApi.Model
                     NoUrut = 4,
                     NamaAction = "Hapus",
                     IdController = "Akun",
+                },
+
+                 /* Audit Login */
+                new ActionViewModel{
+                    IdAction = "GetListAuditLogin",
+                    NoUrut = 1,
+                    NamaAction = "Lihat",
+                    IdController = "AuditLogin",
                 },
 
                 #endregion
@@ -351,6 +383,33 @@ namespace cpcApi.Model
                     NamaAction = "Hapus",
                     IdController = "MasterMerekKaset",
                 },
+
+                /* Master Denom */
+                new ActionViewModel{
+                    IdAction = "GetListMasterDenom",
+                    NoUrut = 1,
+                    NamaAction = "Lihat",
+                    IdController = "MasterDenom",
+                },
+                new ActionViewModel{
+                    IdAction = "PostMasterDenom",
+                    NoUrut = 2,
+                    NamaAction = "Tambah",
+                    IdController = "MasterDenom",
+                },
+                new ActionViewModel{
+                    IdAction = "PutMasterDenom",
+                    NoUrut = 3,
+                    NamaAction = "Edit",
+                    IdController = "MasterDenom",
+                },
+                new ActionViewModel{
+                    IdAction = "DeleteMasterDenom",
+                    NoUrut = 4,
+                    NamaAction = "Hapus",
+                    IdController = "MasterDenom",
+                },
+
                 #endregion
 
                 #region Logistik
@@ -374,7 +433,6 @@ namespace cpcApi.Model
                     IdController = "RegisterSeal",
                 },
                 #endregion
-
 
                 #region cpc
                 /* Order Pengisian kaset */
@@ -418,7 +476,7 @@ namespace cpcApi.Model
                 },
 
 
-                 /* Proses Persiapan uang */
+                /* Proses Persiapan uang */
                 new ActionViewModel{
                     IdAction = "GetListProsesCpc",
                     NoUrut = 1,
@@ -443,6 +501,54 @@ namespace cpcApi.Model
                     NamaAction = "Delete Draft",
                     IdController = "ProsesPersiapanUang",
                 },
+
+                /* Tracking Kaset */
+                new ActionViewModel{
+                    IdAction = "GetListTrackingKaset",
+                    NoUrut = 1,
+                    NamaAction = "Lihat",
+                    IdController = "TrackingKaset",
+                },
+                new ActionViewModel{
+                    IdAction = "GetHistory",
+                    NoUrut = 2,
+                    NamaAction = "Detail Tracking",
+                    IdController = "TrackingKaset",
+                },
+
+
+                /* Stock Vault */
+                new ActionViewModel{
+                    IdAction = "GetListStokVault",
+                    NoUrut = 1,
+                    NamaAction = "Lihat",
+                    IdController = "StokVault",
+                },
+                new ActionViewModel{
+                    IdAction = "GetMutasi",
+                    NoUrut = 2,
+                    NamaAction = "Detail Mutasi",
+                    IdController = "StokVault",
+                },
+                new ActionViewModel{
+                    IdAction = "PostMutasi",
+                    NoUrut = 3,
+                    NamaAction = "Mutasi",
+                    IdController = "StokVault",
+                },
+                new ActionViewModel{
+                    IdAction = "PostTransfer",
+                    NoUrut = 4,
+                    NamaAction = "Mutasi Antar Cabang",
+                    IdController = "StokVault",
+                },
+                new ActionViewModel{
+                    IdAction = "PostOpname",
+                    NoUrut = 5,
+                    NamaAction = "Opaname",
+                    IdController = "StokVault",
+                },
+                
                 #endregion
             };
         }

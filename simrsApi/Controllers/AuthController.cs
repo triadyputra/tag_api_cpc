@@ -2,6 +2,7 @@
 using cpcApi.Model;
 using cpcApi.Model.DTO;
 using cpcApi.Model.DTO.konfigurasi;
+using cpcApi.Model.Konfigurasi;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -22,27 +23,34 @@ namespace cpcApi.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> userManager;
-        private readonly RoleManager<ApplicationRole> roleManager;
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
 
-        public AuthController(UserManager<ApplicationUser> userManager, RoleManager<ApplicationRole> roleManager, IConfiguration configuration, ApplicationDbContext context)
+        public AuthController(
+            UserManager<ApplicationUser> userManager,
+            IConfiguration configuration,
+            ApplicationDbContext context)
         {
             this.userManager = userManager;
-            this.roleManager = roleManager;
             _configuration = configuration;
             _context = context;
         }
 
-        [HttpPost]
-        [Route("login")]
+        // =====================================================
+        // LOGIN (Single Session + Audit IP/Device)
+        // =====================================================
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] FormLoginDto model)
         {
-            var user = await userManager.FindByNameAsync(model.username);
+            var ip = GetIpAddress();
+            var device = GetDeviceInfo();
 
+            var user = await userManager.FindByNameAsync(model.username);
 
             if (user == null)
             {
+                await SaveAuditLogin(null, model.username, ip, device, false);
+                //return Unauthorized(new { message = "Username tidak ditemukan" });
                 return Ok(new
                 {
                     metadata = new { code = "201", message = "Username tidak ditemukan" },
@@ -51,207 +59,98 @@ namespace cpcApi.Controllers
                 });
             }
 
-            if (user.Active == false)
+            if (!user.Active)
             {
+                await SaveAuditLogin(user.Id, user.UserName, ip, device, false);
+                //return Unauthorized(new { message = "User tidak aktif" });
                 return Ok(new
                 {
-                    metadata = new { code = "201", message = "Pengguna sudah tidak aktif" },
+                    metadata = new { code = "201", message = "User tidak aktif" },
                     response = ""
 
                 });
             }
 
-            if (await userManager.CheckPasswordAsync(user, model.password) == false)
+            if (!await userManager.CheckPasswordAsync(user, model.password))
             {
-                //return BadRequest(new { message = "Pasword tidak sesuai" });
+                await SaveAuditLogin(user.Id, user.UserName, ip, device, false);
+                //return Unauthorized(new { message = "User password tidak cocok" });
                 return Ok(new
                 {
-                    metadata = new { code = "201", message = "Pasword tidak sesuai" },
+                    metadata = new { code = "201", message = "User password tidak sesuai" },
                     response = ""
 
                 });
             }
 
-            if (user != null && await userManager.CheckPasswordAsync(user, model.password))
-            {
-                var userRoles = await userManager.GetRolesAsync(user);
-                var authClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                };
+            // 🔥 Single session: naikkan session version (biar device lama langsung 401)
+            user.SessionVersion += 1;
+            await userManager.UpdateAsync(user);
 
-                foreach (var userRole in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
-                }
+            // 🔥 Revoke semua refresh token lama
+            var oldTokens = _context.RefreshToken
+                .Where(x => x.UserId == user.Id && !x.IsRevoked);
 
-                var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
+            foreach (var oldToken in oldTokens)
+                oldToken.IsRevoked = true;
 
-                var token = new JwtSecurityToken(
-                    issuer: _configuration["JWT:ValidIssuer"],
-                    audience: _configuration["JWT:ValidAudience"],
-                    //expires: DateTime.Now.AddYears(1),
-                    expires: DateTime.Now.AddMinutes(10), // 🔥 PENTING
-                    claims: authClaims,
-                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-                    );
+            // ✅ Audit login sukses
+            var auditId = await SaveAuditLogin(user.Id, user.UserName, ip, device, true);
 
-                var refreshToken = GenerateRefreshToken(user.Id);
+            await _context.SaveChangesAsync();
 
-                _context.RefreshToken.Add(refreshToken);
-                await _context.SaveChangesAsync();
+            // Build access token (WAJIB include SessionVersion)
+            var accessToken = BuildAccessToken(user.UserName, user.SessionVersion);
 
-                var roles = await (
-                                from usr in _context.Users
-                                join userRole in _context.UserRoles.AsNoTracking() on usr.Id equals userRole.UserId
-                                join role in _context.Roles on userRole.RoleId equals role.Id
-                                where usr.UserName == user.UserName
-                                select role
-                            ).ToListAsync();
+            // Create refresh token baru (kalau mau, simpan auditId juga di refresh token)
+            var refreshToken = GenerateRefreshToken(user.Id);
 
-                var _acces = new List<AccesModel>();
+            _context.RefreshToken.Add(refreshToken);
+            await _context.SaveChangesAsync();
 
-                if (roles.Count() > 0)
-                {
-                    foreach (var role in roles)
-                    {
-                        if (!string.IsNullOrWhiteSpace(role.Access))
-                        {
-                            var accessList = JsonConvert.DeserializeObject<IEnumerable<AccesModel>>(role.Access);
-                            foreach (var _accessList in accessList)
-                            {
-
-                                _acces.Add(new AccesModel
-                                {
-                                    IdController = _accessList.IdController,
-                                    IdAction = _accessList.IdAction,
-                                });
-                            }
-                        }
-
-
-                    }
-                }
-
-                var distinctList = _acces.GroupBy(s => s.IdAction).Select(s => s.First()).ToList();
-                ModulClass xData = new ModulClass();
-                //var menuItem = xData.Action().Where(x => x.NamaAction.ToLower().Contains("lihat")).ToList();
-
-                /* new */
-                var allControllers = xData.GetListMenu()
-                    .SelectMany(m => m.ControllerViewModel ?? new List<ControllerViewModel>())
-                    .ToList();
-
-                var userAccessibleControllers = allControllers
-                    .Select(controller => new ControllerViewModel
-                    {
-                        IdController = controller.IdController,
-                        NoUrut = controller.NoUrut,
-                        Controller = controller.Controller,
-                        IdMenu = controller.IdMenu,
-                        ActionViewModel = (controller.ActionViewModel ?? new List<ActionViewModel>())
-                            .Where(action =>
-                                //!string.IsNullOrEmpty(action.NamaAction) &&
-                                //action.NamaAction.ToLower().Contains("lihat") &&
-                                distinctList.Any(a =>
-                                    a.IdController == controller.IdController &&
-                                    a.IdAction == action.IdAction)
-                            )
-                            .ToList()
-                    })
-                    .Where(ctrl => ctrl.ActionViewModel.Any())
-                    .ToList();
-
-                var sendRole = userAccessibleControllers
-                .SelectMany(ctrl => ctrl.ActionViewModel
-                    //.Where(a => !string.IsNullOrEmpty(a.NamaAction) &&
-                    //            a.NamaAction.ToLower().Contains("lihat"))
-                    .Select(a => new FilterMenuWeb
-                    {
-                        action = a.IdAction,
-                        subject = a.IdController
-                    }))
-                .ToList();
-
-                string _token = new JwtSecurityTokenHandler().WriteToken(token);
-                return Ok(new
-                {
-                    metadata = new { code = "200", message = "ok" },
-                    response = new
-                    {
-                        token = _token,
-                        refreshToken = refreshToken.Token,
-                        expiresIn = 600
-                        //user = new {
-                        //    fullName = user.FullName,
-                        //    username = user.UserName,
-                        //    avatar = user.Photo,
-                        //    group = userRoles,
-                        //    role = userRoles[0]
-                        //},
-                        //acces = sendRole,
-                        //akses = _configuration["HeaderValidation:SecretKey"],
-                    }
-                });
-            }
             return Ok(new
             {
-                metadata = new { code = "201", message = "Tidak bisa login" },
-                response = ""
-
+                metadata = new { code = "200", message = "ok" },
+                response = new
+                {
+                    token = new JwtSecurityTokenHandler().WriteToken(accessToken),
+                    refreshToken = refreshToken.Token,
+                    expiresIn = 600,
+                    auditLoginId = auditId // optional buat tracking
+                }
             });
         }
 
+        // =====================================================
+        // REFRESH (WAJIB include SessionVersion)
+        // =====================================================
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh([FromHeader(Name = "X-Refresh-Token")] string refreshToken)
         {
             var storedToken = await _context.RefreshToken
                 .FirstOrDefaultAsync(x => x.Token == refreshToken);
 
-            // ❌ token tidak ditemukan / expired / sudah dipakai
             if (storedToken == null ||
                 storedToken.ExpiredAt < DateTime.UtcNow ||
                 storedToken.IsUsed ||
                 storedToken.IsRevoked)
             {
-                return Unauthorized(new
-                {
-                    metadata = new { code = "401", message = "Invalid refresh token" }
-                });
+                return Unauthorized(new { message = "Invalid refresh token" });
             }
 
-            // 🔒 tandai token lama sudah dipakai
             storedToken.IsUsed = true;
 
             var user = await userManager.FindByIdAsync(storedToken.UserId);
+            if (user == null || !user.Active)
+                return Unauthorized(new { message = "User tidak valid / tidak aktif" });
 
-            // 🔁 buat access token baru
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+            // ✅ Access token baru harus bawa SessionVersion terbaru dari DB
+            var newAccessToken = BuildAccessToken(user.UserName, user.SessionVersion);
 
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_configuration["JWT:Secret"])
-            );
-
-            var newAccessToken = new JwtSecurityToken(
-                issuer: _configuration["JWT:ValidIssuer"],
-                audience: _configuration["JWT:ValidAudience"],
-                expires: DateTime.UtcNow.AddMinutes(15),
-                claims: claims,
-                signingCredentials: new SigningCredentials(
-                    key,
-                    SecurityAlgorithms.HmacSha256
-                )
-            );
-
-            // 🔁 generate refresh token BARU
+            // Refresh token baru
             var newRefreshToken = GenerateRefreshToken(user.Id);
-
             _context.RefreshToken.Add(newRefreshToken);
+
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -266,20 +165,35 @@ namespace cpcApi.Controllers
             });
         }
 
+        // =====================================================
+        // LOGOUT (revoke token + set logout time audit terakhir)
+        // =====================================================
         [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
-            var user = await userManager.FindByNameAsync(username);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized();
 
+            var user = await userManager.FindByNameAsync(username);
+            if (user == null) return Unauthorized();
+
+            // revoke refresh token user
             var tokens = _context.RefreshToken
                 .Where(x => x.UserId == user.Id && !x.IsRevoked);
 
-            foreach (var token in tokens)
-            {
-                token.IsRevoked = true;
-            }
+            foreach (var t in tokens)
+                t.IsRevoked = true;
+
+            // set logout time pada audit login terakhir (yang belum logout)
+            var lastAudit = await _context.AuditLogin
+                .Where(x => x.UserId == user.Id && x.IsSuccess && x.LogoutTime == null)
+                .OrderByDescending(x => x.LoginTime)
+                .FirstOrDefaultAsync();
+
+            if (lastAudit != null)
+                lastAudit.LogoutTime = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -378,18 +292,22 @@ namespace cpcApi.Controllers
             {
                 ["/konfigurasi/akun"] = "Akun",
                 ["/konfigurasi/group"] = "Role",
+                ["/konfigurasi/audit-login"] = "AuditLogin",
 
                 ["/master-data/cabang"] = "MasterCabang",
                 ["/master-data/mesin-atm"] = "MasterMesin",
                 ["/master-data/kaset"] = "MasterKaset",
                 ["/master-data/bank"] = "MasterBank",
                 ["/master-data/merek-kaset"] = "MasterMerekKaset",
+                ["/master-data/denom"] = "MasterDenom",
 
                 ["/logistik/register-seal"] = "RegisterSeal",
 
                 ["/cpc/order-pengisian-kaset"] = "OrderCpc",
                 ["/cpc/penerimaan-sisa-lokasi"] = "PengembalianKaset",
                 ["/cpc/form-cadangan"] = "OrderCpc",
+                ["/cpc/tracking-kaset"] = "TrackingKaset",
+                ["/cpc/stok-vault"] = "StokVault",
             };
 
 
@@ -423,6 +341,12 @@ namespace cpcApi.Controllers
                     icon = "IconLockAccess",
                     href = "/konfigurasi/group"
                 },
+                new {
+                    id = Guid.NewGuid(),
+                    title = "Log Login",
+                    icon = "IconHistory",
+                    href = "/konfigurasi/audit-login"
+                },
 
                 // ======================
                 // MASTER DATA
@@ -436,34 +360,40 @@ namespace cpcApi.Controllers
                 },
                 new {
                     id = Guid.NewGuid(),
-                    title = "Master Mesin",
-                    icon = "IconWashMachine",
-                    href = "/master-data/mesin-atm"
-                },
-                new {
-                    id = Guid.NewGuid(),
-                    title = "Master Kaset",
-                    icon = "IconBriefcase2",
-                    href = "/master-data/kaset"
+                    title = "Master Bank",
+                    icon = "IconBuildingBank",
+                    href = "/master-data/bank"
                 },
                 new
                 {
                     id = Guid.NewGuid(),
-                    title = "Master Pendukung",
-                    icon = "IconAdjustmentsAlt",
+                    title = "Master CPC",
+                    icon = "IconSandbox",
                     href = "#", // parent only
                     children = new List<object>
                     {
                         new {
                             id = Guid.NewGuid(),
-                            title = "Master Bank",
-                            icon = "IconPoint",
-                            href = "/master-data/bank"
+                            title = "Master Mesin",
+                            icon = "IconWashMachine",
+                            href = "/master-data/mesin-atm"
+                        },
+                        new {
+                            id = Guid.NewGuid(),
+                            title = "Master Kaset",
+                            icon = "IconBriefcase2",
+                            href = "/master-data/kaset"
+                        },
+                        new {
+                            id = Guid.NewGuid(),
+                            title = "Master Denom",
+                            icon = "IconCoin",
+                            href = "/master-data/denom"
                         },
                         new {
                             id = Guid.NewGuid(),
                             title = "Master Merek Kaset",
-                            icon = "IconPoint",
+                            icon = "IconFavicon",
                             href = "/master-data/merek-kaset"
                         },
                     }
@@ -484,31 +414,64 @@ namespace cpcApi.Controllers
                 // CPC
                 // ======================
                 new { navlabel = true, subheader = "Cash Processing Center" },
-                new {
+                new
+                {
                     id = Guid.NewGuid(),
-                    title = "Order Pengisian ATM",
-                    icon = "IconCashBanknote",
-                    href = "/cpc/order-pengisian-kaset"
+                    title = "Operasional",
+                    icon = "IconSandbox",
+                    href = "#", // parent only
+                    children = new List<object>
+                    {
+                        new {
+                            id = Guid.NewGuid(),
+                            title = "Order Pengisian ATM",
+                            icon = "IconCashBanknote",
+                            href = "/cpc/order-pengisian-kaset"
+                        },
+                        new {
+                            id = Guid.NewGuid(),
+                            title = "Sisa Lokasi Atm",
+                            icon = "IconMapPin",
+                            href = "/cpc/penerimaan-sisa-lokasi"
+                        },
+                        new {
+                            id = Guid.NewGuid(),
+                            title = "Form Proses",
+                            icon = "IconWashMachine",
+                            href = "/cpc/form-cadangan"
+                        },
+                        new {
+                            id = Guid.NewGuid(),
+                            title = "Tracking Kaset",
+                            icon = "IconMapSearch",
+                            href = "/cpc/tracking-kaset"
+                        },
+                    }
                 },
-                new {
+                new
+                {
                     id = Guid.NewGuid(),
-                    title = "Sisa Lokasi Atm",
-                    icon = "IconMapPin",
-                    href = "/cpc/penerimaan-sisa-lokasi"
+                    title = "Stock Uang",
+                    icon = "IconStackMiddle",
+                    href = "#", // parent only
+                    children = new List<object>
+                    {
+                        new {
+                            id = Guid.NewGuid(),
+                            title = "Stock Vault",
+                            icon = "IconMoneybag",
+                            href = "/cpc/stok-vault"
+                        },
+                    }
                 },
-                new {
-                    id = Guid.NewGuid(),
-                    title = "Form Cadangan CPC ATM",
-                    icon = "IconWashMachine",
-                    href = "/cpc/form-cadangan"
-                },
+
 
                 new { navlabel = true, subheader = "Cash Vault" },
 
 
-                
 
-                
+
+
             };
 
             // =====================================================
@@ -646,6 +609,32 @@ namespace cpcApi.Controllers
             });
         }
 
+
+        // =====================================================
+        // Helpers
+        // =====================================================
+        private JwtSecurityToken BuildAccessToken(string username, int sessionVersion)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, username),
+                new Claim("SessionVersion", sessionVersion.ToString()),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_configuration["JWT:Secret"])
+            );
+
+            return new JwtSecurityToken(
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
+                expires: DateTime.UtcNow.AddMinutes(10),
+                claims: claims,
+                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+            );
+        }
+
         private RefreshToken GenerateRefreshToken(string userId)
         {
             return new RefreshToken
@@ -657,6 +646,40 @@ namespace cpcApi.Controllers
                 IsUsed = false,
                 IsRevoked = false
             };
+        }
+
+        private async Task<long?> SaveAuditLogin(string? userId, string? username, string ip, string device, bool success)
+        {
+            var audit = new AuditLogin
+            {
+                UserId = userId,
+                Username = username,
+                IpAddress = ip,
+                Device = device,
+                UserAgent = device,
+                LoginTime = DateTime.UtcNow,
+                IsSuccess = success
+            };
+
+            _context.AuditLogin.Add(audit);
+            await _context.SaveChangesAsync();
+
+            return audit.Id;
+        }
+
+        private string GetIpAddress()
+        {
+            // kalau ada proxy/IIS reverse proxy, X-Forwarded-For bisa berisi "clientIp, proxyIp"
+            var xff = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(xff))
+                return xff.Split(',')[0].Trim();
+
+            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "-";
+        }
+
+        private string GetDeviceInfo()
+        {
+            return HttpContext.Request.Headers["User-Agent"].ToString();
         }
     }
 }

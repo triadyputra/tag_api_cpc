@@ -1,5 +1,6 @@
 ﻿using cpcApi.Model;
 using cpcApi.Model.Cpc;
+using cpcApi.Model.Konfigurasi;
 using cpcApi.Model.Logistik;
 using cpcApi.Model.MasterData;
 using Microsoft.AspNetCore.Identity;
@@ -42,6 +43,15 @@ namespace cpcApi.Data
 
         /* Logistik */
         public DbSet<RegisterSeal> RegisterSeal { get; set; }
+
+
+        public DbSet<AuditLogin> AuditLogin { get; set; }
+        public DbSet<MasterDenom> MasterDenom { get; set; }
+        
+        
+        public DbSet<StokVaultCabang> StokVaultCabang { get; set; }
+        public DbSet<MutasiVault> MutasiVault { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -302,6 +312,51 @@ namespace cpcApi.Data
                 entity.Property(e => e.JenisUang)
                       .HasMaxLength(20);
             });
+
+
+            // =====================================================
+            // STOCK UANG
+            // =====================================================
+            builder.Entity<StokVaultCabang>(entity =>
+            {
+                entity.ToTable("StokVaultCabang");
+
+                entity.HasKey(e => e.Id);
+
+                /* ================= INDEX ================= */
+
+                // 🔥 1 Cabang + 1 Nominal hanya boleh 1 baris
+                entity.HasIndex(e => new { e.KdCabang, e.KdBank, e.Nominal })
+                      .IsUnique()
+                      .HasDatabaseName("UX_STOKVAULT_CABANG_BANK_NOMINAL");
+
+                entity.HasIndex(e => e.KdCabang)
+                      .HasDatabaseName("IX_STOKVAULT_CABANG");
+
+                entity.Property(x => x.RowVersion)
+                    .IsRowVersion();
+
+            });
+
+            // =====================================================
+            // MUTASI UANG
+            // =====================================================
+            builder.Entity<MutasiVault>(entity =>
+            {
+                entity.ToTable("MutasiVault");
+
+                entity.HasKey(e => e.Id);
+
+                entity.HasIndex(e => new { e.KdCabang, e.KdBank, e.Nominal })
+                      .HasFilter("[TipeMutasi] = 'SALDO_AWAL'")
+                      .IsUnique()
+                      .HasDatabaseName("UX_MUTASIVAULT_SALDOAWAL");
+
+                entity.HasIndex(e => new { e.KdCabang, e.KdBank, e.Nominal, e.CreatedAt })
+                      .HasDatabaseName("IX_MUTASIVAULT_HISTORY");
+
+            });
+
         }
 
     }
