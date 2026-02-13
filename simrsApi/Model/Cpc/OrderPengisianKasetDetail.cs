@@ -31,7 +31,10 @@ namespace cpcApi.Model.Cpc
         public decimal Total => Denom * Lembar;
 
         // ================= NAVIGATION =================
+        [ForeignKey(nameof(OrderId))]
         public OrderPengisianKaset Order { get; set; } = default!;
+
+        [ForeignKey(nameof(KodeKaset))]
         public KasetStock KasetStock { get; set; } = default!;
     }
 }

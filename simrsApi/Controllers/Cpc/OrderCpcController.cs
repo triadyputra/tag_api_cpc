@@ -7,6 +7,7 @@ using cpcApi.Model.DTO.Cpc.orderkaset;
 using cpcApi.Model.DTO.Cpc.Report;
 using cpcApi.Model.MasterData;
 using cpcApi.Report;
+using cpcApi.Services.Cpc.Vault;
 using cpcApi.Services.Mesin;
 using cpcApi.Services.Order;
 using DevExpress.XtraPrinting.Native;
@@ -26,11 +27,13 @@ namespace cpcApi.Controllers.Cpc
         private readonly DapperSistagContext _daperContext;
         private readonly IRepoOrder _order;
         private readonly ApplicationDbContext _context;
-        public OrderCpcController(ApplicationDbContext context, DapperSistagContext daperContext, IRepoOrder order)
+        private readonly IVaultService _vaultService;
+        public OrderCpcController(ApplicationDbContext context, DapperSistagContext daperContext, IRepoOrder order, IVaultService vaultService)
         {
             _daperContext = daperContext;
             _order = order;
             _context = context;
+            _vaultService = vaultService;
         }
 
         [ApiKeyAuthorize]
@@ -366,6 +369,110 @@ namespace cpcApi.Controllers.Cpc
             });
         }
 
+        [ApiKeyAuthorize]
+        [HttpPost("{id}/final")]
+        public async Task<ActionResult<ApiResponse<object>>> FinalOrderCpc(string id)
+        {
+            var username = User.FindFirst(ClaimTypes.Name)?.Value ?? "system";
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var trx = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    var now = DateTime.UtcNow;
+
+                    var order = await _context.OrderPengisianKaset
+                        .Include(x => x.Details)
+                        .FirstOrDefaultAsync(x => x.Id == id);
+
+                    if (order == null)
+                        return Ok(ApiResponse<object>.Error("Order tidak ditemukan.", "404"));
+
+                    // ✅ kalau sudah FINAL, jangan diproses lagi (idempotent)
+                    if ((order.Status ?? "").ToUpper() == "FINAL")
+                        return Ok(ApiResponse<object>.Success(new { orderId = order.Id }, "Order sudah FINAL"));
+
+                    // ✅ validasi detail
+                    if (order.Details == null || order.Details.Count == 0)
+                        return Ok(ApiResponse<object>.Error("Detail kaset kosong. Tidak bisa final.", "400"));
+
+                    // 🔥 (Opsional) pastikan semua kaset valid status untuk final
+                    // contoh: kaset harus ON_TRIP (sudah ter-dispatch pada draft)
+                    var kasetCodes = order.Details.Select(d => d.KodeKaset).Distinct().ToList();
+
+                    var stocks = await _context.KasetStock
+                        .Where(x => kasetCodes.Contains(x.KdKaset))
+                        .ToListAsync();
+
+                    if (stocks.Count != kasetCodes.Count)
+                        return Ok(ApiResponse<object>.Error("Ada kaset yang tidak ditemukan di stok.", "400"));
+
+                    var invalidKaset = stocks.FirstOrDefault(x => x.Status == "USED");
+                    if (invalidKaset != null)
+                        return Ok(ApiResponse<object>.Error($"Kaset {invalidKaset.KdKaset} sudah USED. Tidak bisa final.", "409"));
+
+                    // =========================================================
+                    // ✅ MUTASI VAULT = OUT sesuai order (per denom)
+                    // Vault berkurang: QtyLembar NEGATIF
+                    // =========================================================
+                    var byDenom = order.Details
+                        .GroupBy(d => d.Denom)
+                        .Select(g => new { Denom = g.Key, Lembar = g.Sum(x => (long)x.Lembar) })
+                        .ToList();
+
+                    foreach (var x in byDenom)
+                    {
+                        // OUT => negative
+                        var qtyVault = -x.Lembar;
+
+                        var result = await _vaultService.TransaksiAsync(
+                            kdCabang: order.KDCABANG,
+                            KdBank: order.KDBANK,
+                            nominal: Convert.ToInt32(x.Denom),
+                            qtyLembar: qtyVault,
+                            tipeMutasi: "ORDER_FINAL_OUT",
+                            referenceNo: order.Id
+                        );
+
+                        if (!result.Success)
+                        {
+                            await trx.RollbackAsync();
+                            return Ok(ApiResponse<object>.Error(result.Message, "400"));
+                        }
+                    }
+
+                    // =========================================================
+                    // SET STATUS FINAL
+                    // =========================================================
+                    order.Status = "FINAL";
+                    order.updated = username;
+                    order.updatedat = now;
+
+                    await _context.SaveChangesAsync();
+                    await trx.CommitAsync();
+
+                    return Ok(ApiResponse<object>.Success(
+                        new { orderId = order.Id },
+                        "Order berhasil di-FINAL-kan"
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    await trx.RollbackAsync();
+                    var fullError =
+                        ex.InnerException?.Message != null
+                            ? $"{ex.Message} | {ex.InnerException.Message}"
+                            : ex.Message;
+
+                    return Ok(ApiResponse<object>.Error(fullError, "500"));
+                }
+            });
+        }
+
         private void AddKasetMovement(
         string kdKaset,
         string action,
@@ -388,6 +495,7 @@ namespace cpcApi.Controllers.Cpc
                 createdat = timeNow
             });
         }
+
         //public async Task<ActionResult<ApiResponse<object>>> PostOrderCpc(
         //    [FromBody] OrderPengisianKasetRequest payload
         //)

@@ -136,6 +136,7 @@ namespace cpcApi.Controllers.Cpc
         {
             var result = await _vaultService.OpnameAsync(
                 request.KdCabang,
+                request.KdBank,
                 request.Nominal,
                 request.SaldoFisik
             );

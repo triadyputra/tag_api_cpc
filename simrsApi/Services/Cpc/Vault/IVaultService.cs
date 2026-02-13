@@ -28,6 +28,15 @@ namespace cpcApi.Services.Cpc.Vault
             int nominal,
             long saldoFisik
         );
+
+        Task<ServiceResult> TransaksiAsync(
+             string kdCabang,
+            string KdBank,
+            int nominal,
+            long qtyLembar,
+            string tipeMutasi,
+            string? referenceNo = null
+        );
     }
 
 }

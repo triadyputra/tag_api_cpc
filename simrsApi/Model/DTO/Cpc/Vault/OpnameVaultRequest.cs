@@ -3,6 +3,7 @@
     public class OpnameVaultRequest
     {
         public string KdCabang { get; set; } = default!;
+        public string KdBank { get; set; } = default!;
         public int Nominal { get; set; }
         public long SaldoFisik { get; set; }
     }

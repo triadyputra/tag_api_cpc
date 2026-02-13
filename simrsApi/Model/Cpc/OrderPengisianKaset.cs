@@ -31,6 +31,17 @@ namespace cpcApi.Model.Cpc
 
         public decimal Jumlah { get; set; }  // total uang
 
+
+        // 🔥 TAMBAHAN
+        [Required]
+        [StringLength(20)]
+        public string Status { get; set; } = "DRAFT";
+
+        // 🔒 Anti race condition
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = default!;
+
+
         // ================= NAVIGATION =================
         public ICollection<OrderPengisianKasetDetail> Details { get; set; }
             = new List<OrderPengisianKasetDetail>();

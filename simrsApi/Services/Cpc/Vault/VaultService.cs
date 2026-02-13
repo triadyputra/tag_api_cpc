@@ -236,7 +236,7 @@ public class VaultService : IVaultService
         string kdCabang,
         string kdBank,
         int nominal,
-        long saldoFisik)
+        long saldoFisik) 
     {
         var strategy = _context.Database.CreateExecutionStrategy();
         ServiceResult result = ServiceResult.Ok();
@@ -300,4 +300,81 @@ public class VaultService : IVaultService
         return result;
     }
 
+
+    // =============================================
+    // MUTASI (NO TRANSACTION HERE)
+    // qtyLembar: positive = masuk, negative = keluar
+    // =============================================
+    public async Task<ServiceResult> TransaksiAsync(
+        string kdCabang,
+        string kdBank,
+        int nominal,
+        long qtyLembar,
+        string tipeMutasi,
+        string? referenceNo = null)
+    {
+        try
+        {
+            var now = DateTime.UtcNow;
+            tipeMutasi = (tipeMutasi ?? "").Trim().ToUpperInvariant();
+
+            var stok = await GetLockedStokAsync(kdCabang, kdBank, nominal);
+
+            // VALIDASI - wajib ada saldo awal dulu
+            if (tipeMutasi != "SALDO_AWAL" && stok == null)
+                return ServiceResult.Fail("Stok belum diinisialisasi.");
+
+            // CREATE saldo awal jika SALDO_AWAL
+            if (stok == null)
+            {
+                stok = new StokVaultCabang
+                {
+                    KdCabang = kdCabang,
+                    KdBank = kdBank,
+                    Nominal = nominal,
+                    SaldoLembar = 0,
+                    UpdatedAt = now
+                };
+                _context.StokVaultCabang.Add(stok);
+                // jangan SaveChanges di sini kalau kamu mau 1x SaveChanges di controller
+                // tapi buat stok baru biasanya aman disimpan; tetap boleh ditunda.
+            }
+
+            long saldoBaru = tipeMutasi == "SALDO_AWAL"
+                ? qtyLembar
+                : stok.SaldoLembar + qtyLembar;
+
+            if (saldoBaru < 0)
+                return ServiceResult.Fail("Saldo tidak mencukupi.");
+
+            stok.SaldoLembar = saldoBaru;
+            stok.UpdatedAt = now;
+
+            _context.MutasiVault.Add(new MutasiVault
+            {
+                KdCabang = kdCabang,
+                KdBank = kdBank,
+                Nominal = nominal,
+                QtyLembar = qtyLembar,
+                TipeMutasi = tipeMutasi,
+                ReferenceNo = referenceNo,
+                SaldoSetelah = saldoBaru,
+                CreatedAt = now
+            });
+
+            return ServiceResult.Ok();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return ServiceResult.Fail("Terjadi konflik transaksi. Silakan ulangi.");
+        }
+        catch (DbUpdateException)
+        {
+            return ServiceResult.Fail("Gagal update vault (kemungkinan duplikasi/constraint).");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult.Fail(ex.Message);
+        }
+    }
 }

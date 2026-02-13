@@ -448,6 +448,12 @@ namespace cpcApi.Model
                     NamaAction = "Proses",
                     IdController = "OrderCpc",
                 },
+                new ActionViewModel{
+                    IdAction = "FinalOrderCpc",
+                    NoUrut = 3,
+                    NamaAction = "Final",
+                    IdController = "OrderCpc",
+                },
 
                  /* Pengembalian sisa lokasi */
                 new ActionViewModel{

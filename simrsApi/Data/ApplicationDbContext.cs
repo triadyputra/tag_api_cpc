@@ -158,6 +158,17 @@ namespace cpcApi.Data
             {
                 entity.Property(e => e.Jumlah)
                       .HasPrecision(18, 2);
+
+                entity.Property(e => e.Status)
+                  .HasMaxLength(20)
+                  .HasDefaultValue("DRAFT");
+
+                entity.Property(e => e.RowVersion)
+                      .IsRowVersion();
+
+                entity.HasIndex(e => e.Status);
+
+                entity.HasIndex(e => new { e.KDCABANG, e.KDBANK });
             });
 
             // =========================
@@ -170,12 +181,34 @@ namespace cpcApi.Data
 
                 entity.HasOne(d => d.Order)
                       .WithMany(h => h.Details)
-                      .HasForeignKey(d => d.OrderId);
+                      .HasForeignKey(d => d.OrderId)
+                      .OnDelete(DeleteBehavior.Cascade);   // 🔥 kalau header dihapus → detail ikut
 
                 entity.HasOne(d => d.KasetStock)
                       .WithMany(k => k.OrderDetails)
                       .HasForeignKey(d => d.KodeKaset)
-                      .HasPrincipalKey(k => k.KdKaset);
+                      .HasPrincipalKey(k => k.KdKaset)
+                      .OnDelete(DeleteBehavior.Restrict);  // 🔥 tidak boleh hapus kaset kalau masih dipakai
+
+                // 🔥 1 slot kaset (1–5) tidak boleh dobel dalam 1 order
+                entity.HasIndex(e => new { e.OrderId, e.Kaset })
+                      .IsUnique();
+
+                // 🔥 1 KodeKaset tidak boleh dipakai 2x dalam 1 order
+                entity.HasIndex(e => new { e.OrderId, e.KodeKaset })
+                      .IsUnique();
+
+                // 🔥 Lembar tidak boleh negatif
+                entity.HasCheckConstraint(
+                    "CK_OrderDetail_Lembar_Positive",
+                    "[Lembar] >= 0"
+                );
+
+                // 🔥 Denom tidak boleh negatif
+                entity.HasCheckConstraint(
+                    "CK_OrderDetail_Denom_Positive",
+                    "[Denom] >= 0"
+                );
             });
 
 
@@ -354,6 +387,14 @@ namespace cpcApi.Data
 
                 entity.HasIndex(e => new { e.KdCabang, e.KdBank, e.Nominal, e.CreatedAt })
                       .HasDatabaseName("IX_MUTASIVAULT_HISTORY");
+
+                entity.HasIndex(e => new { e.ReferenceNo, e.TipeMutasi })
+                      .HasDatabaseName("IX_MUTASIVAULT_REF_TIPE");
+
+                //modelBuilder.Entity<MutasiVault>()
+                //    .HasIndex(x => new { x.ReferenceNo, x.TipeMutasi })
+                //    .IsUnique();
+
 
             });
 

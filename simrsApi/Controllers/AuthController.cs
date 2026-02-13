@@ -681,5 +681,6 @@ namespace cpcApi.Controllers
         {
             return HttpContext.Request.Headers["User-Agent"].ToString();
         }
+    
     }
 }
